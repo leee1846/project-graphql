@@ -16,7 +16,28 @@ const GET_TEAMS = gql`
     }
   }
 `;
+const GET_TEAM = gql`
+  query GetTeam($id: ID!) {
+    team(id: $id) {
+      id
+      manager
+      office
+      extension_number
+      mascot
+      cleaning_duty
+      project
+    }
+  }
+`;
+const DELETE_TEAM = gql`
+  mutation DeleteTeam($id: ID!) {
+    deleteTeam(id: $id) {
+      id
+    }
+  }
+`;
 
+let refetchTeams;
 function Teams() {
   const [contentId, setContentId] = useState(0);
   const [inputs, setInputs] = useState({
@@ -28,6 +49,22 @@ function Teams() {
     project: "",
   });
 
+  const [deleteTeam] = useMutation(DELETE_TEAM, {
+    onCompleted: deleteTeamCompleted,
+  });
+
+  function execDeleteTeam() {
+    if (window.confirm("이 항목을 삭제하시겠습니까?")) {
+      deleteTeam({ variables: { id: contentId } });
+    }
+  }
+
+  function deleteTeamCompleted(data) {
+    console.log(data.deleteTeam);
+    alert(`${data.deleteTeam.id} 항목이 삭제되었습니다.`);
+    refetchTeams();
+    setContentId(0);
+  }
   function AsideItems() {
     const roleIcons = {
       developer: "💻",
@@ -36,7 +73,7 @@ function Teams() {
     };
 
     const { loading, error, data, refetch } = useQuery(GET_TEAMS);
-
+    refetchTeams = refetch;
     if (loading) return <p className='loading'>Loading...</p>;
     if (error) return <p className='error'>Error...</p>;
     return (
@@ -63,8 +100,141 @@ function Teams() {
     );
   }
 
+  // ...
   function MainContents() {
-    return <div></div>;
+    const { loading, error } = useQuery(GET_TEAM, {
+      variables: { id: contentId },
+      onCompleted: (data) => {
+        if (contentId === 0) {
+          setInputs({
+            manager: "",
+            office: "",
+            extension_number: "",
+            mascot: "",
+            cleaning_duty: "",
+            project: "",
+          });
+        } else {
+          setInputs({
+            manager: data.team.manager,
+            office: data.team.office,
+            extension_number: data.team.extension_number,
+            mascot: data.team.mascot,
+            cleaning_duty: data.team.cleaning_duty,
+            project: data.team.project,
+          });
+        }
+      },
+    });
+
+    if (loading) return <p className='loading'>Loading...</p>;
+    if (error) return <p className='error'>Error :(</p>;
+
+    function handleChange(e) {
+      const { name, value } = e.target;
+      setInputs({
+        ...inputs,
+        [name]: value,
+      });
+    }
+
+    return (
+      <div className='inputContainer'>
+        <table>
+          <tbody>
+            {contentId !== 0 && (
+              <tr>
+                <td>Id</td>
+                <td>{contentId}</td>
+              </tr>
+            )}
+            <tr>
+              <td>Manager</td>
+              <td>
+                <input
+                  type='text'
+                  name='manager'
+                  value={inputs.manager}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Office</td>
+              <td>
+                <input
+                  type='text'
+                  name='office'
+                  value={inputs.office}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Extension Number</td>
+              <td>
+                <input
+                  type='text'
+                  name='extension_number'
+                  value={inputs.extension_number}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Mascot</td>
+              <td>
+                <input
+                  type='text'
+                  name='mascot'
+                  value={inputs.mascot}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Cleaning Duty</td>
+              <td>
+                <input
+                  type='text'
+                  name='cleaning_duty'
+                  value={inputs.cleaning_duty}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Project</td>
+              <td>
+                <input
+                  type='text'
+                  name='project'
+                  value={inputs.project}
+                  onChange={handleChange}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {contentId === 0 ? (
+          <div className='buttons'>
+            <button onClick={() => {}}>Submit</button>
+          </div>
+        ) : (
+          <div className='buttons'>
+            <button onClick={() => {}}>Modify</button>
+            <button onClick={execDeleteTeam}>Delete</button>
+            <button
+              onClick={() => {
+                setContentId(0);
+              }}
+            >
+              New
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
